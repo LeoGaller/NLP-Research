@@ -163,7 +163,7 @@ def generateWordCloud(lista , year):
 ### Code execution ###
 # Step 1 - Reading the data and saving as a dataframe
 try:
-    data = readData("C:/Users/leonardo.galler/Documents/Python35/dados/SICOOB/Enquete/enquete-NLP.csv")
+    data = readData("file_name")
     print('Arquivo lido com sucesso!\n')
 except:
     print('Não foi possível ler o arquivo! Verifique o local onde o arquivo está.\n')
