@@ -63,6 +63,7 @@ def breakYears_unsat( data , years_list ):
 # Creating the column with tokens from the comments
 def createTokens( name ):
     eval(name)["comment_list"] = eval(name)['Comentário Usuário'].str.lower().str.split(" ")
+    
     return eval(name)
 
 # Create year list
@@ -74,7 +75,6 @@ def createYearList(data):
 def createWordList(data_unsatisfied):
     ## Creating a list with all the words
     wordsList = []
-    
     for lista in data_unsatisfied["comment_list"]:
         for word in lista:
             wordsList.append(word)
@@ -84,9 +84,8 @@ def createWordList(data_unsatisfied):
 def remSpeChar(word): 
     '''
         Function to remove special characters and numbers from the tokens
-        
     '''
-    symbols_list = ["/",'"',"*" , "(" , ")" , ":" , ";" ,"," , "." , "%" , "#" , "?" , 
+    symbols_list = ["\\","/",'"',"*" , "(" , ")" , ":" , ";" ,"," , "." , "%" , "#" , "?" , 
                     ".","!","'","-","+","|","=","[","]", '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     new_word = ''
     for letter in word:
@@ -101,7 +100,6 @@ def remSpeChar(word):
 def remSpecChar_fromList(lists): 
     '''
         Function to remove special characters and numbers from the tokens and create a list
-        
     '''
     wordsList = []
     for word in lists:
@@ -113,19 +111,14 @@ def remSpecChar_fromList(lists):
 def remTwoCharLenWords(lists): 
     '''
         Function to remove two characters length from the tokens
-        
     '''
     wordsList = [word for word in lists if len(word) > 2]
     return wordsList
-
-## Remove numbers (I'm already removing numbers on remSpeChar)
-#wordsList = [word for word in wordsList if not word.isnumeric()]
 
 ### removing spaces
 def remSpaces(lists):
     '''
         Function to remove spaces from the tokens
-        
     '''
     wordsList = [word.strip().rstrip() for word in lists]
     return wordsList
@@ -150,7 +143,7 @@ def generateWordCloud(lista , year):
     import matplotlib.pyplot as plt
     
     # Calculating the frequency distribution
-    fd_wordsList = nltk.FreqDist(lista)
+    globals()['fd_wordsList'] = nltk.FreqDist(lista)
     
     wc = WordCloud(max_font_size = 100).generate_from_frequencies(fd_wordsList)
     # store default colored image
@@ -160,10 +153,95 @@ def generateWordCloud(lista , year):
     plt.axis("off")
     plt.show()
 
+# Preparation for the word relationship data
+# Creating main nodes # Ordered list of words
+def createNodes( lista ):
+    import nltk , operator
+    temp = dict(nltk.FreqDist(lista))
+    return sorted(temp.items() , key = operator.itemgetter(1) ,reverse = True)
+     
+def fiveMostRepetitiveWords( lista ):
+    '''
+        input: A list containing tuples of words and count number
+        output: A list with the 20 bigger entries
+    '''
+    return lista[:5]
+
+def createCleanAllWordsClean( series ):
+    wordList = []
+    for lista in series:
+        wordList.append( remStopWords( remSpaces( remTwoCharLenWords( remSpecChar_fromList(lista) ) ) ) )
+    
+    # Create full list of words
+    fullList = []
+    for lista in wordList:
+        for word in lista:
+            fullList.append(word)
+        
+    return fullList
+
+def createCleanCleanLists( series ):
+    wordList = []
+    for lista in series:
+        wordList.append( remStopWords( remSpaces( remTwoCharLenWords( remSpecChar_fromList(lista) ) ) ) )
+    return wordList
+
+# Creating data with relationship between words
+def createRelations( mainNodes_list , cleanLists ):
+    import pandas as pd
+    relations = []
+    for mainWord in mainNodes:
+        for lista in cleanLists:
+            if(mainWord[0] in lista):
+                for word in lista:
+                    if(mainWord[0] != word):
+                        relations.append( ( mainWord[0] , word , 1) )
+                    else:
+                        continue
+            else:
+                continue
+
+    nlp_data = pd.DataFrame(relations, columns=['Source','Target','Weight'])
+    return nlp_data
+
+# Creating net visualization of word relation
+def netView( nlp_data_dataframe ):
+    from pyvis.network import Network
+    import pandas as pd
+    
+    nlp_net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white")
+    
+    # set the physics layout of the network
+    nlp_net.barnes_hut()
+    
+    sources = nlp_data['Source']
+    targets = nlp_data['Target']
+    weights = nlp_data['Weight']
+    
+    edge_data = zip(sources, targets, weights)
+    
+    for e in edge_data:
+        src = e[0]
+        dst = e[1]
+        w = e[2]
+    
+        nlp_net.add_node(src, src, title=src)
+        nlp_net.add_node(dst, dst, title=dst)
+        nlp_net.add_edge(src, dst, value=w)
+    
+    neighbor_map = nlp_net.get_adj_list()
+    
+    # add neighbor data to node hover data
+    for node in nlp_net.nodes:
+        node["title"] += " Neighbors:<br>" + "<br>".join(neighbor_map[node["id"]])
+        node["value"] = len(neighbor_map[node["id"]])
+    
+    nlp_net.show("NLP.html")
+
 ### Code execution ###
 # Step 1 - Reading the data and saving as a dataframe
 try:
-    data = readData("file_name")
+    data = readData("C:/Users/leonardo.galler/Documents/Python35/dados/SICOOB/Enquete/enquete-NLP.csv")
     print('Arquivo lido com sucesso!\n')
 except:
     print('Não foi possível ler o arquivo! Verifique o local onde o arquivo está.\n')
@@ -174,12 +252,6 @@ try:
     print("Coluna Criada com sucesso!")
 except:
     print("Não foi possível criar a coluna de ano. Verifique os dados")
-
-# Retrieving the name of the columns and saving in other variable
-#data_columns = data.columns
-# ['Ano-Mês Votação', 'Código Login', 'Número Central',
-#  'Número Cooperativa', 'Código Pergunta', 'Pergunta', 'Código Resposta',
-#  'Resposta', 'Comentário Usuário', 'Produto Referido Enquete', 'Ano']
 
 # Which years we have in the dataset
 print('\nYears in the dataset:\n',data["Ano"].sort_values().unique())
@@ -207,3 +279,9 @@ listToChart = lambda lista : remStopWords( remSpaces( remTwoCharLenWords( remSpe
 # Step 8 - Generating the wordcloud for each year
 for datasets , year in zip(datasetsNameList , years_list):
     generateWordCloud( listToChart(eval(datasets)) , year )
+
+# Step 9 - Create main nodes
+mainNodes = fiveMostRepetitiveWords( createNodes( createCleanAllWordsClean(data_unsatisfied2019["comment_list"]) ) )
+
+# Step 10 - Looking for the relationships
+cleanLists = createCleanCleanLists(data_unsatisfied2019["comment_list"])
