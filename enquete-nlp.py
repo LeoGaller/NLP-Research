@@ -129,10 +129,10 @@ def remStopWords(lists):
         Function to remove stopwords from the lists
         
     '''
+    from string import punctuation
+    import nltk
     # Stopwords list
-    stopwords = ['','que','não','nao','dos','das','por','para','com','esta','está','uma','tem','sem','foi','nos','de',
-             'do','da','em', 'os' , 'as' , 'um' , 'ao', 'se','ou', 'nas','pra', 'isso', 'só' , 'pelo' , 'assim' , 'meu'
-             'ele', 'já' , 'vai' , 'sistema']
+    stopwords = nltk.corpus.stopwords.words('portuguese') + list(punctuation) + [0,1,2,3,4,5,6,7,8,9] + ["0","1","2","3","4","5","6","7","8","9"] + ['sistema','nao']
     wordsList = [ word for word in lists if word not in stopwords ]
     return wordsList
 ### End of wordlist
@@ -202,21 +202,27 @@ def createRelations( mainNodes_list , cleanLists ):
                 continue
 
     nlp_data = pd.DataFrame(relations, columns=['Source','Target','Weight'])
-    return nlp_data
+    return nlp_data.groupby(['Source','Target']).sum().reset_index()
+
+# Create function to filter dataframe for weight bigger than 1
+def filterDataFrameWeight( df ):
+    df.where(df['Weight'] > 2, inplace = True)
+    df.dropna(inplace = True)
+    
+    return df
 
 # Creating net visualization of word relation
 def netView( nlp_data_dataframe ):
     from pyvis.network import Network
-    import pandas as pd
     
     nlp_net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white")
     
     # set the physics layout of the network
     nlp_net.barnes_hut()
     
-    sources = nlp_data['Source']
-    targets = nlp_data['Target']
-    weights = nlp_data['Weight']
+    sources = nlp_data_dataframe.loc[:,'Source']
+    targets = nlp_data_dataframe.loc[:,'Target']
+    weights = nlp_data_dataframe['Weight']
     
     edge_data = zip(sources, targets, weights)
     
@@ -233,7 +239,7 @@ def netView( nlp_data_dataframe ):
     
     # add neighbor data to node hover data
     for node in nlp_net.nodes:
-        node["title"] += " Neighbors:<br>" + "<br>".join(neighbor_map[node["id"]])
+        node["title"] += "<br>Neighbors:<br>" + "<br>".join(neighbor_map[node["id"]])
         node["value"] = len(neighbor_map[node["id"]])
     
     nlp_net.show("NLP.html")
@@ -284,4 +290,7 @@ for datasets , year in zip(datasetsNameList , years_list):
 mainNodes = fiveMostRepetitiveWords( createNodes( createCleanAllWordsClean(data_unsatisfied2019["comment_list"]) ) )
 
 # Step 10 - Looking for the relationships
-cleanLists = createCleanCleanLists(data_unsatisfied2019["comment_list"])
+cleanLists = createCleanCleanLists( data_unsatisfied2018["comment_list"] )
+
+# Step 11 - Creating relationship data and plotting
+netView( filterDataFrameWeight( createRelations( mainNodes , cleanLists ) ) )
