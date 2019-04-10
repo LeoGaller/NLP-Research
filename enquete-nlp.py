@@ -6,6 +6,11 @@ Created on Fri Mar  1 10:14:18 2019
 """
 
 def readData( file ):
+    '''
+    Function to read the datafile.
+    input: the location and name of the file
+    output: Dataframe
+    '''
     import pandas as pd
     # Folder of the data
     data = pd.read_csv(file , encoding = "latin_1", delimiter = ";", header = 0 )
@@ -15,10 +20,45 @@ def readData( file ):
 
 #Creating a year column and adding to the dataframe
 def addYearColumn( data ):
+    '''
+    Create a year column for better filtering of data.
+    Input: Dataframe
+    Output: Dataframe with an added year column    
+    '''
     data["Ano"] = data['Ano-Mês Votação'].str.slice(0,4)
     return data
 
+# Create year list
+def createYearList(data):
+    '''
+    Create a list of year for control of processing through years.
+    Input: Dataframe
+    Outuput: List of unique years 
+    '''
+    years_list = [year for year in data["Ano"].sort_values().unique() if str(year) != 'nan']
+    try:
+        print('Erasing used Variable to create list of years!')
+        del year
+    except:
+        print('It was not possible to erase variable, we will continue the program!')
+        
+    return years_list
+
+def createDatasetNameList( list_of_years ):
+    '''
+    Function to generate a list with the name of the datasets used
+    Input: List of years
+    Output: List of datasets name
+    '''
+    print("Generating datasets names!\n")
+    return ['data_unsatisfied' + str(year) for year in years_list]
+
 def splitDataPerYear_unsat( data , year ):
+    '''
+    Function to split the data per year and filter for unsatisfied and where the comments did not have "NAO SE APLICA".
+    Input: a dataframe with unfiltered data a list of years
+    Output: Datasets per year
+    '''
     # Subsetting for unsatisfied
     ## Marking all the values that correspond to unsatisfied
     globals()['data_unsatisfied'+str(year)] = data[data["Ano"] == str(year)].where(data['Código Resposta'] == 2, inplace = False)
@@ -31,29 +71,51 @@ def splitDataPerYear_unsat( data , year ):
     
 ### Breaking the information by years and filtering just to unsatisfied users
 def breakYears_unsat( data , years_list ):
+    '''
+    Function to generate summary information of the general dataset per year and at the end run the fuction to split the data.
+    Input: Dataframe and a list of years
+    Output: Dataframes broken by year and with unsatisfied users
+    '''
+    import matplotlib.pyplot as plt
     for year in years_list:
         if(str(year) == 'nan'):
             break
         
-        print("### Início Informações para "+str(year)+". ###")
+        print("### Início Informações para o ano "+str(year)+". ###")
         
         # Counting unique users per year-month
-        print("Quantidade Respondentes Únicos por mês: ", data[data["Ano"] == year].groupby("Ano-Mês Votação")['Código Login'].nunique())
+        #print("Quantidade Respondentes Únicos por mês: ", data[data["Ano"] == year].groupby("Ano-Mês Votação")['Código Login'].nunique())
+        def to_series( data , year , grouping_list):
+            '''
+            Function to create the grouped data
+            Input: dataframe, year string and a list of items to group
+            Output: Series with grouped data
+            '''
+            return data[data["Ano"] == year].groupby(grouping_list)['Código Login'].nunique()
         
-        # Counting unsatisfied users per cooperativa
-        print("Quantidade Respondentes Únicos por Cooperativa : ", data[data["Ano"] == year].groupby("Número Cooperativa")['Código Login'].nunique())
+        # From series to frame
+        toFrame = lambda series : series.to_frame()
         
-        # Counting unique centrals
-        print("Quantidade Centrais Respondentes : ", data[data["Ano"] == year]["Número Central"].nunique())
+        # Reindex de df
+        reindex = lambda frame : frame.reindex()
         
-        # Counting unique cooperativas
-        print("Quantidade de Cooperativas Respondentes : ", data[data["Ano"] == year]["Número Cooperativa"].nunique())
+        # Rename columns
+        renamed = lambda rename_df : rename_df.rename(columns = {'Código Login':'QTD'})
         
-        # Counting unique users per satisfaction
-        print("Quantidade Usuários Únicos Por Satisfação",data[data["Ano"] == year].groupby(['Código Resposta'])['Código Login'].nunique())
+        # Plotting the data
+        usersPerMonth_plot = lambda data : data.plot(kind = "bar" , title = "Unique users per year-month", colormap = "summer" , figsize = (10 , 10))
         
-        # Counting unique users per satisfaction and central
-        print("Quantidade Usuários Únicos Por Satisfação e Central ",data[data["Ano"] == year].groupby(['Código Resposta','Número Central'])['Código Login'].nunique())
+        usersPerMonth_plot( renamed( reindex( toFrame( to_series( data , year , ["Ano-Mês Votação"] ) ) ) ) )
+        plt.show()
+        # Counting unique users per satisfaction, central and year-month
+        # print("Quantidade Usuários Únicos Por Satisfação e Central ",data[data["Ano"] == "2013"].groupby(["Ano-Mês Votação","Número Central","Código Resposta"])["Código Login"].nunique())
+        usersPerCentralPerSatisf_plot = lambda data : data.plot(kind = "bar" , title = "Unique users per Central and Satisfaction" , colormap = "summer" , figsize = (10 , 10))
+        usersPerCentralPerSatisf_plot( renamed( reindex( toFrame( to_series( data , year , ["Número Central","Código Resposta"] ) ) ) ) )
+        plt.show()
+        
+        usersPerMonthPerSatisf_plot = lambda data : data.plot(kind = "bar" , title = "Unique users per year-month, Central and Satisfaction" ,  colormap = "summer" , figsize = (10 , 10))
+        usersPerMonthPerSatisf_plot( renamed( reindex( toFrame( to_series( data , year , ["Ano-Mês Votação","Código Resposta"] ) ) ) ) )
+        plt.show()
         
         print("### Fim de Informações para "+str(year)+". ###\n")
               
@@ -62,17 +124,22 @@ def breakYears_unsat( data , years_list ):
     
 # Creating the column with tokens from the comments
 def createTokens( name ):
+    '''
+    Function to tokenize the comment column
+    Input: A text that will be used as a variable
+    Output: Lower case tokens creating a new column
+    '''
     eval(name)["comment_list"] = eval(name)['Comentário Usuário'].str.lower().str.split(" ")
     
     return eval(name)
 
-# Create year list
-def createYearList(data):
-    years_list = [year for year in data["Ano"].sort_values().unique() if str(year) != 'nan']
-    return years_list
-
 ### Function to create the word list
 def createWordList(data_unsatisfied):
+    '''
+    Create a list of all words
+    Input: Dataframe
+    Output: A list with all words
+    '''
     ## Creating a list with all the words
     wordsList = []
     for lista in data_unsatisfied["comment_list"]:
@@ -83,7 +150,9 @@ def createWordList(data_unsatisfied):
 
 def remSpeChar(word): 
     '''
-        Function to remove special characters and numbers from the tokens
+    Function to remove special characters and numbers from the tokens
+    Input: A string
+    Ouput: A string
     '''
     symbols_list = ["\\","/",'"',"*" , "(" , ")" , ":" , ";" ,"," , "." , "%" , "#" , "?" , 
                     ".","!","'","-","+","|","=","[","]", '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
@@ -99,7 +168,9 @@ def remSpeChar(word):
 
 def remSpecChar_fromList(lists): 
     '''
-        Function to remove special characters and numbers from the tokens and create a list
+    Function to remove special characters and numbers from the tokens and create a list
+    Input: List
+    Output: List
     '''
     wordsList = []
     for word in lists:
@@ -110,7 +181,9 @@ def remSpecChar_fromList(lists):
 # Removing words with just 2 character length
 def remTwoCharLenWords(lists): 
     '''
-        Function to remove two characters length from the tokens
+    Function to remove two characters length from the tokens
+    Input: List
+    Output: List
     '''
     wordsList = [word for word in lists if len(word) > 2]
     return wordsList
@@ -118,7 +191,9 @@ def remTwoCharLenWords(lists):
 ### removing spaces
 def remSpaces(lists):
     '''
-        Function to remove spaces from the tokens
+    Function to remove spaces from the tokens.
+    Input: List
+    Output: List
     '''
     wordsList = [word.strip().rstrip() for word in lists]
     return wordsList
@@ -126,18 +201,25 @@ def remSpaces(lists):
 ## removing stopwords
 def remStopWords(lists): 
     '''
-        Function to remove stopwords from the lists
-        
+    Function to remove stopwords from the lists.
+    Input: List
+    Output: List 
     '''
     from string import punctuation
     import nltk
     # Stopwords list
     stopwords = nltk.corpus.stopwords.words('portuguese') + list(punctuation) + [0,1,2,3,4,5,6,7,8,9] + ["0","1","2","3","4","5","6","7","8","9"] + ['sistema','nao']
+    
     wordsList = [ word for word in lists if word not in stopwords ]
     return wordsList
 ### End of wordlist
     
 def generateWordCloud(lista , year):
+    '''
+    Function to generate the wordcloud charts.
+    Input: A list of datasets names and a list of years
+    Output: Wordcloud chart
+    '''
     import nltk
     from wordcloud import WordCloud
     import matplotlib.pyplot as plt
@@ -156,18 +238,29 @@ def generateWordCloud(lista , year):
 # Preparation for the word relationship data
 # Creating main nodes # Ordered list of words
 def createNodes( lista ):
+    '''
+    Function to create the distribution frequency of words, put them in order
+    Input: List
+    Output: Ordered Dictionary
+    '''
     import nltk , operator
     temp = dict(nltk.FreqDist(lista))
     return sorted(temp.items() , key = operator.itemgetter(1) ,reverse = True)
      
-def fiveMostRepetitiveWords( lista ):
+def mostRepetitiveWords( lista ):
     '''
-        input: A list containing tuples of words and count number
-        output: A list with the 20 bigger entries
+    Slicing the data to the 10 most repeatedwords
+    input: A list containing tuples of words and count number
+    output: A list with the 20 bigger entries
     '''
-    return lista[:5]
+    return lista[:10]
 
 def createCleanAllWordsClean( series ):
+    '''
+    Function to create a list with all lists with stopwords removed.
+    Input: pandas.Dataframe.series
+    Output: list
+    '''
     wordList = []
     for lista in series:
         wordList.append( remStopWords( remSpaces( remTwoCharLenWords( remSpecChar_fromList(lista) ) ) ) )
@@ -180,7 +273,12 @@ def createCleanAllWordsClean( series ):
         
     return fullList
 
-def createCleanCleanLists( series ):
+def createCleanLists( series ):
+    '''
+    Function to remove sotpwords from all lists of comments.
+    Input: pandas.Dataframes.series
+    Output: list
+    '''
     wordList = []
     for lista in series:
         wordList.append( remStopWords( remSpaces( remTwoCharLenWords( remSpecChar_fromList(lista) ) ) ) )
@@ -188,9 +286,14 @@ def createCleanCleanLists( series ):
 
 # Creating data with relationship between words
 def createRelations( mainNodes_list , cleanLists ):
+    '''
+    Function to map the relationship between words.
+    Input: 2 lists. 1 of the main words, that will be main nodes, 2 the cleaned list of comments.
+    Output: Dataframe
+    '''
     import pandas as pd
     relations = []
-    for mainWord in mainNodes:
+    for mainWord in mainNodes_list:
         for lista in cleanLists:
             if(mainWord[0] in lista):
                 for word in lista:
@@ -206,19 +309,29 @@ def createRelations( mainNodes_list , cleanLists ):
 
 # Create function to filter dataframe for weight bigger than 1
 def filterDataFrameWeight( df ):
+    '''
+    Filtering the dataframe to return just the most significative words
+    Input: Dataframe
+    Output: Dataframe
+    '''
     df.where(df['Weight'] > 2, inplace = True)
     df.dropna(inplace = True)
     
     return df
 
 # Creating net visualization of word relation
-def netView( nlp_data_dataframe ):
+def netView( nlp_data_dataframe , year_list):
+    '''
+    Function to generate the network view.
+    Input: Dataframe
+    Output: Network chart
+    '''
     from pyvis.network import Network
     
     nlp_net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white")
     
     # set the physics layout of the network
-    nlp_net.barnes_hut()
+    nlp_net.force_atlas_2based()
     
     sources = nlp_data_dataframe.loc[:,'Source']
     targets = nlp_data_dataframe.loc[:,'Target']
@@ -239,10 +352,11 @@ def netView( nlp_data_dataframe ):
     
     # add neighbor data to node hover data
     for node in nlp_net.nodes:
-        node["title"] += "<br>Neighbors:<br>" + "<br>".join(neighbor_map[node["id"]])
+        node["title"] += "<br>Neighbors:<br><style>body{font-size:18px;}</style>" + "<br>".join(neighbor_map[node["id"]])
         node["value"] = len(neighbor_map[node["id"]])
-    
-    nlp_net.show("NLP.html")
+    nlp_net.toggle_stabilization(True)
+    nlp_net.show_buttons(filter_=['physics'])
+    nlp_net.show("NLP-Enquete"+year+".html")
 
 ### Code execution ###
 # Step 1 - Reading the data and saving as a dataframe
@@ -251,6 +365,7 @@ try:
     print('Arquivo lido com sucesso!\n')
 except:
     print('Não foi possível ler o arquivo! Verifique o local onde o arquivo está.\n')
+    
 # Step 2 - Create the year column and add to the dataframe
 print("Criando a coluna de ano!\n")
 try:
@@ -267,10 +382,7 @@ years_list = createYearList(data)
 print("Os dados abrangem os anos de: ", years_list)
 
 # Step 4 - Defining list to save the name of the datesets created
-datasetsNameList = ['data_unsatisfied' + str(year) for year in years_list]
-print("Foram criados os datasets:")
-for name in datasetsNameList:
-    print(name)
+datasetsNameList = createDatasetNameList(years_list)
 
 # Step 5 - Breaking the information by years and filtering just to unsatisfied users
 breakYears_unsat( data , years_list )
@@ -287,10 +399,12 @@ for datasets , year in zip(datasetsNameList , years_list):
     generateWordCloud( listToChart(eval(datasets)) , year )
 
 # Step 9 - Create main nodes
-mainNodes = fiveMostRepetitiveWords( createNodes( createCleanAllWordsClean(data_unsatisfied2019["comment_list"]) ) )
+mainNodesAnonym = lambda nome : mostRepetitiveWords( createNodes( createCleanAllWordsClean( eval(nome)["comment_list"] ) ) )
+cleanLists = lambda nome : createCleanLists( eval(nome)["comment_list"] )
 
-# Step 10 - Looking for the relationships
-cleanLists = createCleanCleanLists( data_unsatisfied2018["comment_list"] )
-
-# Step 11 - Creating relationship data and plotting
-netView( filterDataFrameWeight( createRelations( mainNodes , cleanLists ) ) )
+# Step 10 - Creating relationship data and plotting
+for datasets_name , year in zip(datasetsNameList , years_list):
+    netView( filterDataFrameWeight( createRelations( mainNodesAnonym(datasets_name) , cleanLists(datasets_name) ) ) , year )
+    
+# Releasing variables that were used
+del (datasets_name , datasets , year)
