@@ -107,12 +107,13 @@ def breakYears_unsat( data , years_list ):
         
         usersPerMonth_plot( renamed( reindex( toFrame( to_series( data , year , ["Ano-Mês Votação"] ) ) ) ) )
         plt.show()
-        # Counting unique users per satisfaction, central and year-month
-        # print("Quantidade Usuários Únicos Por Satisfação e Central ",data[data["Ano"] == "2013"].groupby(["Ano-Mês Votação","Número Central","Código Resposta"])["Código Login"].nunique())
+        
+        # Counting unique users per satisfaction and central
         usersPerCentralPerSatisf_plot = lambda data : data.plot(kind = "bar" , title = "Unique users per Central and Satisfaction" , colormap = "summer" , figsize = (10 , 10))
         usersPerCentralPerSatisf_plot( renamed( reindex( toFrame( to_series( data , year , ["Número Central","Código Resposta"] ) ) ) ) )
         plt.show()
         
+        # Counting unique users per year-month and satisfaction 
         usersPerMonthPerSatisf_plot = lambda data : data.plot(kind = "bar" , title = "Unique users per year-month, Central and Satisfaction" ,  colormap = "summer" , figsize = (10 , 10))
         usersPerMonthPerSatisf_plot( renamed( reindex( toFrame( to_series( data , year , ["Ano-Mês Votação","Código Resposta"] ) ) ) ) )
         plt.show()
