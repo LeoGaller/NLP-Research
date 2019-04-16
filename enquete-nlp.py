@@ -46,12 +46,21 @@ def createYearList(data):
 
 def createDatasetNameList( list_of_years ):
     '''
-    Function to generate a list with the name of the datasets used
+    Function to generate a list with the name of the datasets used (UNSATISFIED)
     Input: List of years
     Output: List of datasets name
     '''
     print("Generating datasets names!\n")
     return ['data_unsatisfied' + str(year) for year in years_list]
+
+def createDatasetNameList_sat( list_of_years ):
+    '''
+    Function to generate a list with the name of the datasets used (SATISFIED)
+    Input: List of years
+    Output: List of datasets name
+    '''
+    print("Generating datasets names!\n")
+    return ['data_satisfied' + str(year) for year in years_list]
 
 def splitDataPerYear_unsat( data , year ):
     '''
@@ -70,6 +79,23 @@ def splitDataPerYear_unsat( data , year ):
     globals()['data_unsatisfied'+str(year)].dropna(inplace = True)
     
 ### Breaking the information by years and filtering just to unsatisfied users
+    
+def splitDataPerYear_sat( data , year ):
+    '''
+    Function to split the data per year and filter for unsatisfied and where the comments did not have "NAO SE APLICA".
+    Input: a dataframe with unfiltered data a list of years
+    Output: Datasets per year
+    '''
+    # Subsetting for unsatisfied
+    ## Marking all the values that correspond to unsatisfied
+    globals()['data_satisfied'+str(year)] = data[data["Ano"] == str(year)].where(data['Código Resposta'] == 1, inplace = False)
+    ### Removing satisfied
+    globals()['data_satisfied'+str(year)].dropna(inplace = True)
+    #### Marking where the comments are like 'NAO SE APLICA'
+    globals()['data_satisfied'+str(year)].where(globals()['data_unsatisfied' + year ]['Comentário Usuário'] != 'NAO SE APLICA', inplace = True, axis = 0)
+    ##### Removing items with no comments
+    globals()['data_satisfied'+str(year)].dropna(inplace = True)
+
 def breakYears_unsat( data , years_list ):
     '''
     Function to generate summary information of the general dataset per year and at the end run the fuction to split the data.
@@ -124,6 +150,60 @@ def breakYears_unsat( data , years_list ):
         splitDataPerYear_unsat(data , str(year))
     
 # Creating the column with tokens from the comments
+        
+def breakYears_sat( data , years_list ):
+    '''
+    Function to generate summary information of the general dataset per year and at the end run the fuction to split the data.
+    Input: Dataframe and a list of years
+    Output: Dataframes broken by year and with unsatisfied users
+    '''
+    import matplotlib.pyplot as plt
+    for year in years_list:
+        if(str(year) == 'nan'):
+            break
+        
+        print("### Início Informações para o ano "+str(year)+". ###")
+        
+        # Counting unique users per year-month
+        #print("Quantidade Respondentes Únicos por mês: ", data[data["Ano"] == year].groupby("Ano-Mês Votação")['Código Login'].nunique())
+        def to_series( data , year , grouping_list):
+            '''
+            Function to create the grouped data
+            Input: dataframe, year string and a list of items to group
+            Output: Series with grouped data
+            '''
+            return data[data["Ano"] == year].groupby(grouping_list)['Código Login'].nunique()
+        
+        # From series to frame
+        toFrame = lambda series : series.to_frame()
+        
+        # Reindex de df
+        reindex = lambda frame : frame.reindex()
+        
+        # Rename columns
+        renamed = lambda rename_df : rename_df.rename(columns = {'Código Login':'QTD'})
+        
+        # Plotting the data
+        usersPerMonth_plot = lambda data : data.plot(kind = "bar" , title = "Unique users per year-month", colormap = "summer" , figsize = (10 , 10))
+        
+        usersPerMonth_plot( renamed( reindex( toFrame( to_series( data , year , ["Ano-Mês Votação"] ) ) ) ) )
+        plt.show()
+        
+        # Counting unique users per satisfaction and central
+        usersPerCentralPerSatisf_plot = lambda data : data.plot(kind = "bar" , title = "Unique users per Central and Satisfaction" , colormap = "summer" , figsize = (10 , 10))
+        usersPerCentralPerSatisf_plot( renamed( reindex( toFrame( to_series( data , year , ["Número Central","Código Resposta"] ) ) ) ) )
+        plt.show()
+        
+        # Counting unique users per year-month and satisfaction 
+        usersPerMonthPerSatisf_plot = lambda data : data.plot(kind = "bar" , title = "Unique users per year-month, Central and Satisfaction" ,  colormap = "summer" , figsize = (10 , 10))
+        usersPerMonthPerSatisf_plot( renamed( reindex( toFrame( to_series( data , year , ["Ano-Mês Votação","Código Resposta"] ) ) ) ) )
+        plt.show()
+        
+        print("### Fim de Informações para "+str(year)+". ###\n")
+              
+        # Creating the datasets for years
+        splitDataPerYear_sat(data , str(year))
+
 def createTokens( name ):
     '''
     Function to tokenize the comment column
@@ -144,6 +224,20 @@ def createWordList(data_unsatisfied):
     ## Creating a list with all the words
     wordsList = []
     for lista in data_unsatisfied["comment_list"]:
+        for word in lista:
+            wordsList.append(word)
+    # Return the list
+    return wordsList
+
+def createWordList_sat(data_satisfied):
+    '''
+    Create a list of all words
+    Input: Dataframe
+    Output: A list with all words
+    '''
+    ## Creating a list with all the words
+    wordsList = []
+    for lista in data_satisfied["comment_list"]:
         for word in lista:
             wordsList.append(word)
     # Return the list
@@ -233,6 +327,27 @@ def generateWordCloud(lista , year):
     default_colors = wc.to_array()
     plt.imshow(wc.recolor(random_state=3),interpolation="bilinear")
     plt.title("Principais Reclamações - "+ year)
+    plt.axis("off")
+    plt.show()
+    
+def generateWordCloud_sat(lista , year):
+    '''
+    Function to generate the wordcloud charts.
+    Input: A list of datasets names and a list of years
+    Output: Wordcloud chart
+    '''
+    import nltk
+    from wordcloud import WordCloud
+    import matplotlib.pyplot as plt
+    
+    # Calculating the frequency distribution
+    globals()['fd_wordsList'] = nltk.FreqDist(lista)
+    
+    wc = WordCloud(max_font_size = 100).generate_from_frequencies(fd_wordsList)
+    # store default colored image
+    default_colors = wc.to_array()
+    plt.imshow(wc.recolor(random_state=3),interpolation="bilinear")
+    plt.title("Principais Informações - "+ year)
     plt.axis("off")
     plt.show()
 
@@ -359,6 +474,44 @@ def netView( nlp_data_dataframe , year_list):
     nlp_net.show_buttons(filter_=['physics'])
     nlp_net.show("NLP-Enquete"+year+".html")
 
+def netView_sat( nlp_data_dataframe , year_list):
+    '''
+    Function to generate the network view.
+    Input: Dataframe
+    Output: Network chart
+    '''
+    from pyvis.network import Network
+    
+    nlp_net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white")
+    
+    # set the physics layout of the network
+    nlp_net.force_atlas_2based()
+    
+    sources = nlp_data_dataframe.loc[:,'Source']
+    targets = nlp_data_dataframe.loc[:,'Target']
+    weights = nlp_data_dataframe['Weight']
+    
+    edge_data = zip(sources, targets, weights)
+    
+    for e in edge_data:
+        src = e[0]
+        dst = e[1]
+        w = e[2]
+    
+        nlp_net.add_node(src, src, title=src)
+        nlp_net.add_node(dst, dst, title=dst)
+        nlp_net.add_edge(src, dst, value=w)
+    
+    neighbor_map = nlp_net.get_adj_list()
+    
+    # add neighbor data to node hover data
+    for node in nlp_net.nodes:
+        node["title"] += "<br>Neighbors:<br><style>body{font-size:18px;}</style>" + "<br>".join(neighbor_map[node["id"]])
+        node["value"] = len(neighbor_map[node["id"]])
+    nlp_net.toggle_stabilization(True)
+    nlp_net.show_buttons(filter_=['physics'])
+    nlp_net.show("NLP-Enquete-Satisfied"+year+".html")
+
 ### Code execution ###
 # Step 1 - Reading the data and saving as a dataframe
 try:
@@ -384,12 +537,17 @@ print("Os dados abrangem os anos de: ", years_list)
 
 # Step 4 - Defining list to save the name of the datesets created
 datasetsNameList = createDatasetNameList(years_list)
+datasetsNameList_sat = createDatasetNameList_sat(years_list)
 
 # Step 5 - Breaking the information by years and filtering just to unsatisfied users
 breakYears_unsat( data , years_list )
+breakYears_sat( data , years_list )
 
 # Step 6 - Create the column and tokens from comments in each dataset
 for dataset in datasetsNameList:
+    dataset = createTokens(dataset)
+
+for dataset in datasetsNameList_sat:
     dataset = createTokens(dataset)
 
 # Step 7 - Treating the comment list column and generating the chart.
@@ -399,6 +557,9 @@ listToChart = lambda lista : remStopWords( remSpaces( remTwoCharLenWords( remSpe
 for datasets , year in zip(datasetsNameList , years_list):
     generateWordCloud( listToChart(eval(datasets)) , year )
 
+for datasets , year in zip(datasetsNameList_sat , years_list):
+    generateWordCloud_sat( listToChart(eval(datasets)) , year )
+    
 # Step 9 - Create main nodes
 mainNodesAnonym = lambda nome : mostRepetitiveWords( createNodes( createCleanAllWordsClean( eval(nome)["comment_list"] ) ) )
 cleanLists = lambda nome : createCleanLists( eval(nome)["comment_list"] )
@@ -406,6 +567,8 @@ cleanLists = lambda nome : createCleanLists( eval(nome)["comment_list"] )
 # Step 10 - Creating relationship data and plotting
 for datasets_name , year in zip(datasetsNameList , years_list):
     netView( filterDataFrameWeight( createRelations( mainNodesAnonym(datasets_name) , cleanLists(datasets_name) ) ) , year )
-    
+
+for datasets_name , year in zip(datasetsNameList_sat , years_list):
+    netView_sat( createRelations( mainNodesAnonym(datasets_name) , cleanLists(datasets_name) ) , year )    
 # Releasing variables that were used
-del (datasets_name , datasets , year)
+#del (datasets_name , datasets , year)
