@@ -3,6 +3,7 @@
 Created on Fri Mar  1 10:14:18 2019
 
 @author: Leonardo.Galler
+@note: NLP research of answers to surveys at the cooperative level. 
 """
 
 def readData( file ):
@@ -303,7 +304,7 @@ def remStopWords(lists):
     from string import punctuation
     import nltk
     # Stopwords list
-    stopwords = nltk.corpus.stopwords.words('portuguese') + list(punctuation) + [0,1,2,3,4,5,6,7,8,9] + ["0","1","2","3","4","5","6","7","8","9"] + ['sistema','nao']
+    stopwords = nltk.corpus.stopwords.words('portuguese') + list(punctuation) + [0,1,2,3,4,5,6,7,8,9] + ["0","1","2","3","4","5","6","7","8","9"] + ['sistema','aplica','nao']
     
     wordsList = [ word for word in lists if word not in stopwords ]
     return wordsList
@@ -329,6 +330,7 @@ def generateWordCloud(lista , year):
     plt.title("Principais Reclamações - "+ year)
     plt.axis("off")
     plt.show()
+    plt.savefig('charts/wordcloud_unsatisfied-'+year+'.png')
     
 def generateWordCloud_sat(lista , year):
     '''
@@ -350,6 +352,7 @@ def generateWordCloud_sat(lista , year):
     plt.title("Principais Informações - "+ year)
     plt.axis("off")
     plt.show()
+    plt.savefig('charts/wordcloud_satisfied-'+year+'.png')
 
 # Preparation for the word relationship data
 # Creating main nodes # Ordered list of words
@@ -572,3 +575,10 @@ for datasets_name , year in zip(datasetsNameList_sat , years_list):
     netView_sat( createRelations( mainNodesAnonym(datasets_name) , cleanLists(datasets_name) ) , year )    
 # Releasing variables that were used
 #del (datasets_name , datasets , year)
+    
+### EXPORTING THE DATA GENERATED IF NEEDED
+#exportThis = createRelations( mainNodesAnonym('data_unsatisfied2019') , cleanLists('data_unsatisfied2019') )
+#exportThis.to_csv('testCognos.csv')
+#
+#df = pd.DataFrame.from_dict(fd_wordsList , orient = "index")
+#df.to_csv('testCognos2.csv')
