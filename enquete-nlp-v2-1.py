@@ -473,6 +473,10 @@ data_aux = lambda data , year : remStopWords(
 wordCloud_sat = lambda year : generateWordCloud_sat(data_aux(data , year) , year )
 wordCloud_sat(year)
 
+print('\n')
+print("Generating the Network Graph!")   
+print('\n')
+
 ### Generate Network view
 mainNodes_list = lambda data , year : mostRepetitiveWords( createNodes( data_aux( data , year ) ) )
 auxNodes_lists = lambda data , year : cleanLists( createTokens( breakYears_sat( data , year) ) )        

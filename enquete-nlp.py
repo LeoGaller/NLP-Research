@@ -287,7 +287,7 @@ def remTwoCharLenWords(lists):
     Input: List
     Output: List
     '''
-    wordsList = [word for word in lists if len(word) > 2]
+    wordsList = [word for word in lists if len(word) > 3]
     return wordsList
 
 ### removing spaces
@@ -439,7 +439,7 @@ def filterDataFrameWeight( df ):
     Input: Dataframe
     Output: Dataframe
     '''
-    df.where(df['Weight'] > 2, inplace = True)
+    df.where(df['Weight'] > 5, inplace = True)
     df.dropna(inplace = True)
     
     return df
@@ -568,7 +568,11 @@ for datasets , year in zip(datasetsNameList , years_list):
 
 for datasets , year in zip(datasetsNameList_sat , years_list):
     generateWordCloud_sat( listToChart(eval(datasets)) , year )
-    
+
+print('\n')
+print("Generating the Network Graph!")   
+print('\n')
+
 # Step 9 - Create main nodes
 mainNodesAnonym = lambda nome : mostRepetitiveWords( createNodes( createCleanAllWordsClean( eval(nome)["comment_list"] ) ) )
 cleanLists = lambda nome : createCleanLists( eval(nome)["comment_list"] )
