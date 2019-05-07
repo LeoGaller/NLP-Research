@@ -250,12 +250,18 @@ def remSpeChar(word):
     Input: A string
     Ouput: A string
     '''
-    symbols_list = ["\\","/",'"',"*" , "(" , ")" , ":" , ";" ,"," , "." , "%" , "#" , "?" , 
+    symbols_list = ["\\n","/",'"',"*" , "(" , ")" , ":" , ";" ,"," , "." , "%" , "#" , "?" , 
                     ".","!","'","-","+","|","=","[","]", '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    accents_dict = { 'ç' : 'c', 'á' : 'a', 'à' : 'a', 'â' : 'a', 'ã' : 'a', 'é' : 'e',
+                     'è' : 'e', 'ê' : 'e', 'í' : 'i', 'ì' : 'i', 'î' : 'i', 'ó' : 'o',
+                     'ò' : 'o', 'ô' : 'o', 'õ' : 'o', 'ú' : 'u', 'ù' : 'u', 'û' : 'u' }
     new_word = ''
     for letter in word:
+        # Verify if the letter is in the list of symbols
         if(letter in symbols_list):
             new_word = new_word + '' 
+        elif(letter in accents_dict): # Verify if the letter is a special character
+            new_word = new_word + accents_dict[letter]
         else:
             new_word = new_word + letter
     
@@ -304,7 +310,7 @@ def remStopWords(lists):
     from string import punctuation
     import nltk
     # Stopwords list
-    stopwords = nltk.corpus.stopwords.words('portuguese') + list(punctuation) + [0,1,2,3,4,5,6,7,8,9] + ["0","1","2","3","4","5","6","7","8","9"] + ['sistema','aplica','nao']
+    stopwords = nltk.corpus.stopwords.words('portuguese') + list(punctuation) + [0,1,2,3,4,5,6,7,8,9] + ["0","1","2","3","4","5","6","7","8","9"] + ['sistema','aplica']
     
     wordsList = [ word for word in lists if word not in stopwords ]
     return wordsList
@@ -573,8 +579,6 @@ for datasets_name , year in zip(datasetsNameList , years_list):
 
 for datasets_name , year in zip(datasetsNameList_sat , years_list):
     netView_sat( createRelations( mainNodesAnonym(datasets_name) , cleanLists(datasets_name) ) , year )    
-# Releasing variables that were used
-#del (datasets_name , datasets , year)
     
 ### EXPORTING THE DATA GENERATED IF NEEDED
 #exportThis = createRelations( mainNodesAnonym('data_unsatisfied2019') , cleanLists('data_unsatisfied2019') )

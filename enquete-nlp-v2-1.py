@@ -6,6 +6,9 @@ Created on Fri Mar  1 10:14:18 2019
 @note: NLP research of answers to surveys at the cooperative level. 
        The v2 is aimed to develop the research without the creation of intermediate 
        datasets.
+       V2-1 Implemented with the function to replace special letters with commom ones. 
+       With this function I'm aimming to treat the synonym words to make cleaner 
+       network charts.
 """
 
 def readData( file ):
