@@ -343,6 +343,19 @@ def createRelations( mainNodes_list , auxNodes_lists ):
     nlp_data = pd.DataFrame(relations, columns=['Source','Target','Weight'])
     return nlp_data.groupby(['Source','Target']).sum().reset_index()
 
+# Calculating relations for synonyms
+def createRelations_syn( df_group ): # Version 2.0
+    # creating the radical for the source column
+    df_group['radical_src'] = df_group.Source.str.slice(0,4)
+    # creating the radical for the source column
+    df_group['radical_tgt'] = df_group.Target.str.slice(0,4)
+    # First DF to join, just first radical and word
+    df_group_no_number = df_group[ ['radical_src','radical_tgt' , 'Source' ,'Target' ] ].drop_duplicates( ['radical_src','radical_tgt'] , keep = 'first')
+    # Second DF, radical and sum of the number column
+    df_group_count_words = df_group.groupby(['radical_src','radical_tgt'] ).sum().reset_index()
+    # joining dataframes
+    return df_group_count_words.merge(df_group_no_number , on = ['radical_src','radical_tgt'] , how = 'inner')
+
 # Create function to filter dataframe for weight bigger than 1
 def filterDataFrameWeight( df ):
     '''
@@ -350,7 +363,7 @@ def filterDataFrameWeight( df ):
     Input: Dataframe
     Output: Dataframe
     '''
-    df.where(df['Weight'] > 5, inplace = True)
+    df.where(df['Weight'] > 3, inplace = True)
     df.dropna(inplace = True)
     
     return df
@@ -441,7 +454,7 @@ def createCleanLists( series ):
     wordList = []
     for lista in series:
         wordList.append( remStopWords( remSpaces( remTwoCharLenWords( remSpecChar_fromList(lista) ) ) ) )
-    return wordList
+    return [ lista for lista in wordList if(len(lista) > 0) ]
 
 cleanLists = lambda nome : createCleanLists( nome["comment_list"] )
 
@@ -471,16 +484,10 @@ data_aux = lambda data , year : remStopWords(
 
 ## Generate wordCloud
 wordCloud_sat = lambda year : generateWordCloud_sat(data_aux(data , year) , year )
-wordCloud_sat(year)
-
-print('\n')
-print("Generating the Network Graph!")   
-print('\n')
 
 ### Generate Network view
 mainNodes_list = lambda data , year : mostRepetitiveWords( createNodes( data_aux( data , year ) ) )
 auxNodes_lists = lambda data , year : cleanLists( createTokens( breakYears_sat( data , year) ) )        
-netView_sat(createRelations( mainNodes_list(data , year) , auxNodes_lists(data , year) ) , year)
 
 # 2 - Unsatisfied
 data_aux_uns = lambda data , year : remStopWords(
@@ -493,9 +500,21 @@ data_aux_uns = lambda data , year : remStopWords(
 
 ## Generate wordCloud
 wordCloud_uns = lambda year : generateWordCloud_uns(data_aux_uns(data , year) , year )
-wordCloud_uns(year)
+
+print('\n')
+print("Generating the Network Graph!")   
+print('\n')
 
 ### Generate Network view
 mainNodes_list_uns = lambda data , year : mostRepetitiveWords( createNodes( data_aux_uns( data , year ) ) )
 auxNodes_lists_uns = lambda data , year : cleanLists( createTokens( breakYears_uns( data , year) ) )        
-netView_uns(createRelations( mainNodes_list_uns(data , year) , auxNodes_lists_uns(data , year) ) , year)
+
+## Execution
+wordCloud_sat(year)
+wordCloud_uns(year)
+# With synonyms aggregation
+netView_sat( createRelations_syn( createRelations( mainNodes_list(data , year)     , auxNodes_lists(data , year) ) )     , year )
+netView_uns( createRelations_syn( createRelations( mainNodes_list_uns(data , year) , auxNodes_lists_uns(data , year) ) ) , year )
+# Without synonyms aggregation
+netView_sat( createRelations( mainNodes_list(data , year)     , auxNodes_lists(data , year) )     , year )
+netView_uns( createRelations( mainNodes_list_uns(data , year) , auxNodes_lists_uns(data , year) ) , year )
