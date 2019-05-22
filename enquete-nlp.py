@@ -5,6 +5,8 @@ Created on Fri Mar  1 10:14:18 2019
 @author: Leonardo.Galler
 @note: NLP research of answers to surveys at the cooperative level. 
 """
+# To calcutate the execution time
+import time
 
 def readData( file ):
     '''
@@ -432,6 +434,18 @@ def createRelations( mainNodes_list , cleanLists ):
     nlp_data = pd.DataFrame(relations, columns=['Source','Target','Weight'])
     return nlp_data.groupby(['Source','Target']).sum().reset_index()
 
+def createRelations_syn( df_group ): # Version 2.0
+    # creating the radical for the source column
+    df_group['radical_src'] = df_group.Source.str.slice(0,4)
+    # creating the radical for the source column
+    df_group['radical_tgt'] = df_group.Target.str.slice(0,4)
+    # First DF to join, just first radical and word
+    df_group_no_number = df_group[ ['radical_src','radical_tgt' , 'Source' ,'Target' ] ].drop_duplicates( ['radical_src','radical_tgt'] , keep = 'first')
+    # Second DF, radical and sum of the number column
+    df_group_count_words = df_group.groupby(['radical_src','radical_tgt'] ).sum().reset_index()
+    # joining dataframes
+    return df_group_count_words.merge(df_group_no_number , on = ['radical_src','radical_tgt'] , how = 'inner')
+
 # Create function to filter dataframe for weight bigger than 1
 def filterDataFrameWeight( df ):
     '''
@@ -522,6 +536,7 @@ def netView_sat( nlp_data_dataframe , year_list):
     nlp_net.show("NLP-Enquete-Satisfied"+year+".html")
 
 ### Code execution ###
+start_time = time.time()
 # Step 1 - Reading the data and saving as a dataframe
 try:
     data = readData("C:/Users/leonardo.galler/Documents/Python35/dados/SICOOB/Enquete/enquete-NLP.csv")
@@ -579,10 +594,10 @@ cleanLists = lambda nome : createCleanLists( eval(nome)["comment_list"] )
 
 # Step 10 - Creating relationship data and plotting
 for datasets_name , year in zip(datasetsNameList , years_list):
-    netView( filterDataFrameWeight( createRelations( mainNodesAnonym(datasets_name) , cleanLists(datasets_name) ) ) , year )
+    netView( filterDataFrameWeight( createRelations_syn( createRelations( mainNodesAnonym(datasets_name) , cleanLists(datasets_name) ) ) ), year )
 
 for datasets_name , year in zip(datasetsNameList_sat , years_list):
-    netView_sat( createRelations( mainNodesAnonym(datasets_name) , cleanLists(datasets_name) ) , year )    
+    netView_sat( createRelations_syn( createRelations( mainNodesAnonym(datasets_name) , cleanLists(datasets_name) ) ), year )    
     
 ### EXPORTING THE DATA GENERATED IF NEEDED
 #exportThis = createRelations( mainNodesAnonym('data_unsatisfied2019') , cleanLists('data_unsatisfied2019') )
@@ -590,3 +605,4 @@ for datasets_name , year in zip(datasetsNameList_sat , years_list):
 #
 #df = pd.DataFrame.from_dict(fd_wordsList , orient = "index")
 #df.to_csv('testCognos2.csv')
+print("--- %s seconds ---" % (time.time() - start_time))

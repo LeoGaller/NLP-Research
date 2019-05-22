@@ -363,7 +363,7 @@ def filterDataFrameWeight( df ):
     Input: Dataframe
     Output: Dataframe
     '''
-    df.where(df['Weight'] > 3, inplace = True)
+    df.where(df['Weight'] > 5, inplace = True)
     df.dropna(inplace = True)
     
     return df
@@ -470,7 +470,7 @@ data , yearsList = createYearList( addYearColumn( readData( file ) ) ) # " * " u
 ## Define the year to be analized
 
 ############################
-year = '2019'             ##
+year = '2018'             ##
 ############################
 
 # 1 - Satisfied
@@ -514,7 +514,4 @@ wordCloud_sat(year)
 wordCloud_uns(year)
 # With synonyms aggregation
 netView_sat( createRelations_syn( createRelations( mainNodes_list(data , year)     , auxNodes_lists(data , year) ) )     , year )
-netView_uns( createRelations_syn( createRelations( mainNodes_list_uns(data , year) , auxNodes_lists_uns(data , year) ) ) , year )
-# Without synonyms aggregation
-netView_sat( createRelations( mainNodes_list(data , year)     , auxNodes_lists(data , year) )     , year )
-netView_uns( createRelations( mainNodes_list_uns(data , year) , auxNodes_lists_uns(data , year) ) , year )
+netView_uns( filterDataFrameWeight( createRelations_syn( createRelations( mainNodes_list_uns(data , year) , auxNodes_lists_uns(data , year) ) ) ) , year )
